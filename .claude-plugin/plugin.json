@@ -1,6 +1,6 @@
 {
   "name": "session-delete",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "/delete for Claude Code: permanently deletes the current session and every trace it left on disk, stops its processes and ports, closes the session and prints what was freed. Runs locally, never calls the model.",
   "author": {
     "name": "Şuayip Işık",

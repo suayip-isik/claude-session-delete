@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-08
+
 ### Changed
 
 - `/delete` keeps your prompt history by default. The dialog now offers **Delete session, keep prompt history** (first) and **Delete session and prompt history**. With the first, ↑ in later sessions still recalls what you typed in the deleted session, including pasted texts. Before, the session's `history.jsonl` rows and their pasted texts were always deleted.
@@ -23,5 +25,6 @@ All notable changes to this project are documented in this file. The format foll
 - Safety policy: only paths strictly inside the session's roots, links never followed, ownership proven for shared files, PIDs checked against their command before a late kill, atomic history rewrite.
 - Never calls the model.
 
-[Unreleased]: https://github.com/suayip-isik/claude-session-delete/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/suayip-isik/claude-session-delete/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/suayip-isik/claude-session-delete/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/suayip-isik/claude-session-delete/releases/tag/v1.0.0
