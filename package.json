@@ -19,7 +19,6 @@
     "check": "pnpm run lint && pnpm run validate && pnpm run test && pnpm run typecheck"
   },
   "devDependencies": {
-    "shellcheck": "^4.1.0",
     "typescript": "~5.6.3"
   }
 }

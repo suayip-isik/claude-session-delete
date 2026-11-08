@@ -10,9 +10,10 @@ Thanks for helping. This plugin deletes files, so correctness and safety come fi
 
 ## Setup
 
-You need macOS, [Claude Code](https://docs.claude.com/en/docs/claude-code), [pnpm](https://pnpm.io) and Node.js.
+You need macOS, [Claude Code](https://docs.claude.com/en/docs/claude-code), [pnpm](https://pnpm.io), Node.js and [ShellCheck](https://www.shellcheck.net).
 
 ```bash
+brew install shellcheck
 git clone https://github.com/suayip-isik/claude-session-delete.git
 cd claude-session-delete
 pnpm install

@@ -32,6 +32,11 @@ jobs:
       - name: Install dev tools
         run: pnpm install --frozen-lockfile
 
+      # A prebuilt Homebrew bottle: no download from the GitHub API at run time,
+      # so no unauthenticated rate limit on shared runner addresses.
+      - name: Install ShellCheck
+        run: brew install shellcheck
+
       - name: Lint shell scripts
         run: pnpm run lint
 

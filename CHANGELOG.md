@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Fixed
+
+- CI: ShellCheck now comes from Homebrew. The npm `shellcheck` package downloaded the binary from the GitHub API at run time and failed with `403 rate limit exceeded` on shared runners. ShellCheck is now a system prerequisite (`brew install shellcheck`).
+
 ## [1.0.0] - 2026-11-08
 
 ### Added
