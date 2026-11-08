@@ -19,6 +19,6 @@
     "check": "pnpm run lint && pnpm run validate && pnpm run test && pnpm run typecheck"
   },
   "devDependencies": {
-    "typescript": "~5.6.3"
+    "typescript": "~7.0.2"
   }
 }
