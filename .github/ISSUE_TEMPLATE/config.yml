@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/suayip-isik/claude-session-delete/security/advisories/new
+    about: Something deleted or stopped that should not have been? Report it privately.

@@ -1,0 +1,4 @@
+# Scripts are POSIX sh; sourced helpers are resolved next to the script that sources them.
+shell=sh
+source-path=SCRIPTDIR
+external-sources=true

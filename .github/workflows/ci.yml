@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint and test
+    # The plugin and its scripts rely on macOS tools (BSD ps, stat, lsof).
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - name: Install dev tools
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint shell scripts
+        run: pnpm run lint
+
+      - name: Test shell scripts
+        run: pnpm run test:scripts
+
+      - name: Install Claude Code
+        run: |
+          curl -fsSL https://claude.ai/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Validate plugin
+        run: |
+          claude --version
+          pnpm run validate
+
+      - name: Test plugin
+        run: pnpm run test:plugin

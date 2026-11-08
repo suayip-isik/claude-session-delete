@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest a change or a new kind of trace to clean up.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is missing or getting in your way?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should happen instead? For a new trace, say where Claude Code writes it and how it is tied to the session.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

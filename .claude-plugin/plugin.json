@@ -1,0 +1,15 @@
+{
+  "name": "session-delete",
+  "version": "1.0.0",
+  "description": "/delete for Claude Code: permanently deletes the current session and every trace it left on disk, stops its processes and ports, closes the session and prints what was freed. Runs locally, never calls the model.",
+  "author": {
+    "name": "Şuayip Işık",
+    "url": "https://github.com/suayip-isik"
+  },
+  "homepage": "https://github.com/suayip-isik/claude-session-delete#readme",
+  "repository": "https://github.com/suayip-isik/claude-session-delete",
+  "license": "MIT",
+  "keywords": ["session", "delete", "privacy", "cleanup", "disk-space", "slash-command"],
+  "icon": "./assets/icon.png",
+  "types": "./types/index.d.ts"
+}

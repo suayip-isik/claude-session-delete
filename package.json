@@ -1,0 +1,25 @@
+{
+  "name": "claude-session-delete",
+  "private": true,
+  "description": "Development tooling for the session-delete Claude Code plugin. The plugin's version lives in .claude-plugin/plugin.json.",
+  "license": "MIT",
+  "author": "Şuayip Işık",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/suayip-isik/claude-session-delete.git"
+  },
+  "packageManager": "pnpm@10.29.3",
+  "scripts": {
+    "lint": "shellcheck bin/*.sh bin/lib/*.sh tests/scripts/*.sh",
+    "validate": "claude plugin validate .",
+    "test": "pnpm run test:plugin && pnpm run test:scripts",
+    "test:plugin": "claude plugin test .",
+    "test:scripts": "sh tests/scripts/run.sh",
+    "typecheck": "tsc -p .",
+    "check": "pnpm run lint && pnpm run validate && pnpm run test && pnpm run typecheck"
+  },
+  "devDependencies": {
+    "shellcheck": "^4.1.0",
+    "typescript": "~5.6.3"
+  }
+}

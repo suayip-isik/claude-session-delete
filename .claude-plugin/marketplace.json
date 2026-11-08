@@ -1,0 +1,15 @@
+{
+  "name": "claude-session-delete",
+  "description": "The session-delete plugin: a /delete command that permanently removes a Claude Code session and everything it left on disk.",
+  "owner": {
+    "name": "Şuayip Işık",
+    "url": "https://github.com/suayip-isik"
+  },
+  "plugins": [
+    {
+      "name": "session-delete",
+      "source": "./",
+      "description": "Permanently delete the current Claude Code session and every trace of it, without calling the model."
+    }
+  ]
+}
