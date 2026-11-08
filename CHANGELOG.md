@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Changed
+
+- `/delete` keeps your prompt history by default. The dialog now offers **Delete session, keep prompt history** (first) and **Delete session and prompt history**. With the first, ↑ in later sessions still recalls what you typed in the deleted session, including pasted texts. Before, the session's `history.jsonl` rows and their pasted texts were always deleted.
+
 ### Fixed
 
 - CI: ShellCheck now comes from Homebrew. The npm `shellcheck` package downloaded the binary from the GitHub API at run time and failed with `403 rate limit exceeded` on shared runners. ShellCheck is now a system prerequisite (`brew install shellcheck`).

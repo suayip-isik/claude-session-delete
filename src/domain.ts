@@ -60,6 +60,17 @@ export interface DeletionResult {
   readonly failed: readonly { readonly artifact: MeasuredArtifact; readonly reason: string }[]
 }
 
+/**
+ * What /delete does with the session's prompt-history rows (the prompts ↑
+ * recalls in later sessions) and the pasted texts those rows point to.
+ */
+export type HistoryPolicy = 'keep' | 'purge'
+
+/** What became of the prompt history: kept as it was, or purged. */
+export type HistoryOutcome =
+  | { readonly policy: 'keep' }
+  | { readonly policy: 'purge'; readonly rows: number; readonly bytes: number }
+
 /** Finds the items one kind of session data leaves on disk. */
 export interface ArtifactSource {
   readonly name: string

@@ -53,11 +53,14 @@ function inventoryFactory(host: Host, trackedSnapshots: () => Promise<readonly s
         new ShellSnapshotSource(host.fs, trackedSnapshots, () => liveProcesses.map(process => process.command)),
       ]
       const measurer = new Measurer(host.runner)
-      const full = new Inventory([...cheap, ...referenceSources(host, searcher, transcripts)], policy, host.fs, measurer)
-      const rescan = new Inventory(cheap, policy, host.fs, measurer)
+      const inventoryOf = (sources: readonly ArtifactSource[]): Inventory => new Inventory(sources, policy, host.fs, measurer)
+      const session = inventoryOf([...cheap, referenceSource('plans', PLAN_REFERENCE, host, searcher, transcripts)])
+      const promptHistoryFiles = inventoryOf([referenceSource('pasted-texts', PASTED_TEXT_REFERENCE, host, searcher, transcripts)])
+      const rescan = inventoryOf(cheap)
 
       return {
-        collect: () => full.collect(context),
+        collect: () => session.collect(context),
+        collectPromptHistoryFiles: () => promptHistoryFiles.collect(context),
         rescan: () => rescan.collect(context),
         keyedScopes: keyed.flatMap(source => source.scopes(context)),
         allowedRoots: policy.allowedRoots,
@@ -83,27 +86,37 @@ function sessionKeyedSources(host: Host): SessionKeyedSource[] {
 }
 
 /** Shared files only this session uses; these need a search of other sessions, so only the plan runs them. */
-function referenceSources(host: Host, searcher: TextSearcher, transcripts: SessionKeyedSource): ArtifactSource[] {
+function referenceSource(
+  name: string,
+  kind: ReferenceKind,
+  host: Host,
+  searcher: TextSearcher,
+  transcripts: SessionKeyedSource,
+): ArtifactSource {
   const transcriptPaths = async (context: SessionContext): Promise<string[]> =>
     (await transcripts.locate(context)).map(artifact => artifact.path)
-  const source = (name: string, kind: ReferenceKind): ArtifactSource =>
-    new ExclusiveReferenceSource(name, kind, host.runner, host.fs, searcher, transcriptPaths)
 
-  return [
-    source('plans', {
-      pattern: REFERENCE_PATTERNS.planSlug,
-      isInTranscripts: true,
-      token: match => quotedValue(match),
-      pathOf: (context, token) => joinPath(context.configDir, CLAUDE_LAYOUT.plans, `${token}${REFERENCE_PATTERNS.planExtension}`),
-      sharedNeedle: token => `"slug":"${token}"`,
-    }),
-    source('paste-cache', {
-      pattern: REFERENCE_PATTERNS.paste,
-      isInTranscripts: false,
-      token: match => quotedValue(match),
-      pathOf: (context, token) => joinPath(context.configDir, CLAUDE_LAYOUT.pasteCache, `${token}${REFERENCE_PATTERNS.pasteExtension}`),
-    }),
-  ]
+  return new ExclusiveReferenceSource(name, kind, host.runner, host.fs, searcher, transcriptPaths)
+}
+
+/** Plans: matched by the session's slug in its transcripts. Part of the session itself. */
+const PLAN_REFERENCE: ReferenceKind = {
+  pattern: REFERENCE_PATTERNS.planSlug,
+  isInTranscripts: true,
+  token: match => quotedValue(match),
+  pathOf: (context, token) => joinPath(context.configDir, CLAUDE_LAYOUT.plans, `${token}${REFERENCE_PATTERNS.planExtension}`),
+  sharedNeedle: token => `"slug":"${token}"`,
+}
+
+/**
+ * Pasted texts: named by the session's prompt-history rows, which ↑ recalls in
+ * later sessions. They belong to the prompt history, so they go only with it.
+ */
+const PASTED_TEXT_REFERENCE: ReferenceKind = {
+  pattern: REFERENCE_PATTERNS.paste,
+  isInTranscripts: false,
+  token: match => quotedValue(match),
+  pathOf: (context, token) => joinPath(context.configDir, CLAUDE_LAYOUT.pasteCache, `${token}${REFERENCE_PATTERNS.pasteExtension}`),
 }
 
 /** `"key":"value"` → `value`. */

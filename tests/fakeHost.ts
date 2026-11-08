@@ -9,6 +9,9 @@ export const SOCKET = '/tmp/cc-socks/4242.sock'
 export const PROJECT = `${CONFIG}/projects/-Users-tester-app`
 export const TRANSCRIPT = `${PROJECT}/${SID}.jsonl`
 export const PLAN = `${CONFIG}/plans/brave-plan.md`
+/** A pasted text that only this session's prompt-history rows point to. */
+export const PASTE_HASH = '0a1b2c3d4e5f6071'
+export const PASTED_TEXT = `${CONFIG}/paste-cache/${PASTE_HASH}.txt`
 export const SNAPSHOT = `${CONFIG}/shell-snapshots/snapshot-zsh-1700000000000-abc123.sh`
 
 /** A small machine: Claude 4242 runs `npm run dev` (5000) → `node server.js` (5001, port 3000). */
@@ -26,6 +29,7 @@ export class FakeHost implements Host {
     `${TEMP_ROOT}/-Users-tester-app/${SID}`,
     SOCKET,
     PLAN,
+    PASTED_TEXT,
     SNAPSHOT,
     `${this.pluginRoot}/bin/guardian.sh`,
     '/usr/bin/perl',
@@ -102,6 +106,8 @@ export class FakeHost implements Host {
       case '/bin/sh':
         if (joined.includes('echo "$PPID"')) return ok(`${CLAUDE_PID}\n`)
         if (joined.includes('purge-history.sh')) return ok('3 420\n')
+        // This session's history rows name the pasted text; no other session's rows do.
+        if (joined.includes('-oE') && joined.includes('contentHash')) return ok(`"contentHash":"${PASTE_HASH}"\n`)
         return ok()
       case '/bin/ps':
         return ok(this.ps(args))

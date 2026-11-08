@@ -9,7 +9,7 @@ import { Measurer, parseStat } from '../src/inventory/measurer'
 import { isKeyedBy } from '../src/inventory/sources/sessionKeyedSource'
 import { parseLsof } from '../src/processes/socketInspector'
 import { formatBytes } from '../src/report/format'
-import { CLAUDE_PID, CONFIG, FakeHost, PLAN, SID, SNAPSHOT, SOCKET, TRANSCRIPT } from './fakeHost'
+import { CLAUDE_PID, CONFIG, FakeHost, PASTED_TEXT, PLAN, SID, SNAPSHOT, SOCKET, TRANSCRIPT } from './fakeHost'
 
 const facts = { sessionId: SID, configDir: CONFIG }
 
@@ -29,7 +29,7 @@ test('plan reads only: nothing is killed or removed before the confirmation', as
   expect(host.ran('/bin/rm').length).toBe(0)
   expect(plan.context.claudePid).toBe(CLAUDE_PID)
   expect(plan.context.tty).toBe('/dev/ttys009')
-  expect(plan.historyRows).toBe(3)
+  expect(plan.promptHistory.rows).toBe(3)
 })
 
 test('plan finds the session tree and its port, never Claude, its worker or unrelated processes', async () => {
@@ -59,10 +59,17 @@ test('plan lists every trace of the session and nothing of other sessions', asyn
   expect(plan.inventory.refused.length).toBe(0)
 })
 
+test('plan keeps pasted texts apart: they belong to the prompt history, not to the session', async () => {
+  const plan = await createDeleteSession(new FakeHost(), async () => []).plan(facts)
+
+  expect(plan.inventory.artifacts.map(artifact => artifact.path)).not.toContain(PASTED_TEXT)
+  expect(plan.promptHistory.files.artifacts.map(artifact => artifact.path)).toEqual([PASTED_TEXT])
+})
+
 test('begin only starts the guardian: nothing is stopped or deleted while the session is still open', async () => {
   const host = new FakeHost()
   const useCase = createDeleteSession(host, async () => [])
-  const pending = await useCase.begin(await useCase.plan(facts))
+  const pending = await useCase.begin(await useCase.plan(facts), 'purge')
 
   expect(host.ran('/bin/kill').length).toBe(0)
   expect(host.ran('/bin/rm').length).toBe(0)
@@ -82,10 +89,10 @@ test('begin only starts the guardian: nothing is stopped or deleted while the se
   expect(host.written.get(`${work}/fallback-report.txt`)).toContain('Claude Code session')
 })
 
-test('complete stops, deletes, purges the history, prints the summary and silences the guardian', async () => {
+test('complete with purge: stops, deletes, purges the history, prints the summary and silences the guardian', async () => {
   const host = new FakeHost()
   const useCase = createDeleteSession(host, async () => [])
-  const pending = await useCase.begin(await useCase.plan(facts))
+  const pending = await useCase.begin(await useCase.plan(facts), 'purge')
   host.appearAtExit(`${CONFIG}/projects/-Users-tester-app`, `${SID}.jsonl`) // written lazily, after the plan
   const result = await useCase.complete(pending)
 
@@ -93,6 +100,7 @@ test('complete stops, deletes, purges the history, prints the summary and silenc
   const removed = host.ran('/bin/rm')[0] ?? []
   expect(removed.slice(0, 3)).toEqual(['/bin/rm', '-rf', '--'])
   expect(removed).toContain(TRANSCRIPT)
+  expect(removed).toContain(PASTED_TEXT)
   expect(host.ran('/bin/sh').some(argv => argv[1]?.endsWith('bin/purge-history.sh'))).toBe(true)
 
   const print = host.ran('/bin/sh').find(argv => argv[2] === 'cat > "$1"')
@@ -106,6 +114,27 @@ test('complete stops, deletes, purges the history, prints the summary and silenc
   expect(result.report).toContain('3 history rows removed')
   expect(result.report).toMatch(/\d+ files removed · [\d.]+ (B|KB|MB) freed/)
   expect(result.report.trim().split('\n').length).toBeLessThanOrEqual(3)
+})
+
+test('keep (the default choice): the session goes, its prompts and pasted texts stay for ↑ recall', async () => {
+  const host = new FakeHost()
+  const useCase = createDeleteSession(host, async () => [])
+  const pending = await useCase.begin(await useCase.plan(facts), 'keep')
+  const work = '/var/folders/xx/T/claude-session-delete.abc123'
+
+  const launch = host.ran('/bin/sh').find(argv => argv.includes('/plugins/session-delete/bin/guardian.sh')) ?? []
+  expect(launch).not.toContain(`${CONFIG}/history.jsonl`) // the guardian is told to leave the history alone
+  expect(host.written.get(`${work}/paths`)).not.toContain(PASTED_TEXT)
+  expect(host.written.get(`${work}/fallback-report.txt`)).toContain('prompt history kept')
+
+  const result = await useCase.complete(pending)
+  const removed = host.ran('/bin/rm')[0] ?? []
+
+  expect(removed).toContain(`${CONFIG}/file-history/${SID}`)
+  expect(removed).not.toContain(PASTED_TEXT)
+  expect(host.ran('/bin/sh').some(argv => argv[1]?.endsWith('bin/purge-history.sh'))).toBe(false)
+  expect(result.report).toContain('prompt history kept')
+  expect(result.report).not.toContain('history row')
 })
 
 test('the safety policy refuses anything outside the session roots', async () => {

@@ -9,11 +9,13 @@
 #   3. silently removes what the exit wrote last: the listed paths, and every
 #      entry named after the session in the keyed folders (a short session's
 #      transcript, even its project folder, appear only at exit); stops any
-#      listed process still alive and purges the history again;
+#      listed process still alive and, unless the prompt history is kept,
+#      purges the session's history rows again;
 #   4. only if `session.end` could not print the summary, prints the fallback;
 #   5. removes its own work folder.
 #
-# Usage: guardian.sh <claude-pid> <session-id> <history-file> <work-dir> <tty|-> <signal-delay> <failsafe-seconds>
+# Usage: guardian.sh <claude-pid> <session-id> <history-file|-> <work-dir> <tty|-> <signal-delay> <failsafe-seconds>
+# A `-` history file keeps the prompt history; a `-` tty prints nothing.
 # <work-dir>: paths, roots, keyed ("<0|1> <folder>"), pids ("<pid> <command>"),
 #             fallback-report.txt, printed (marker).
 
@@ -101,17 +103,23 @@ sweep_keyed() {
   done <"$work/keyed"
 }
 
+purge_history() {
+  [ "$history" = "$ARG_NONE" ] && return 0
+  /bin/sh "$here/purge-history.sh" "$history" "$sid" >/dev/null 2>&1
+}
+
 print_fallback() {
   [ -f "$work/printed" ] && return 0
-  [ "$tty" != "-" ] && [ -c "$tty" ] && [ -w "$tty" ] || return 0
-  cat "$work/fallback-report.txt" >"$tty" 2>/dev/null
+  if [ "$tty" != "$ARG_NONE" ] && [ -c "$tty" ] && [ -w "$tty" ]; then
+    cat "$work/fallback-report.txt" >"$tty" 2>/dev/null
+  fi
 }
 
 close_session
 stop_leftovers
 sweep
 sweep_keyed
-/bin/sh "$here/purge-history.sh" "$history" "$sid" >/dev/null 2>&1
+purge_history
 print_fallback
 rm -rf -- "$work"
 exit 0

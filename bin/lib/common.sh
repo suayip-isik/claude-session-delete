@@ -11,6 +11,11 @@ umask 077
 # sysexits.h: the command was called with bad arguments.
 readonly EX_USAGE=64
 
+# An argument that does not apply (no terminal; prompt history kept). Matches
+# GUARDIAN.none in src/config.ts.
+# shellcheck disable=SC2034 # read by the scripts that source this file
+readonly ARG_NONE=-
+
 usage_error() {
   exit "$EX_USAGE"
 }

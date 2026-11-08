@@ -72,12 +72,13 @@ async function runDelete($: EngineInterface, pending: PendingDeletions): Promise
     return { text: `Could not start the deletion. ${prefix}${describe(error)} Nothing was deleted.` }
   }
 
-  const answer = await $.ui
-    .ask(confirmationQuestion(plan), { header: CONFIRM.header, options: [CONFIRM.approve, CONFIRM.cancel] })
-    .catch(() => CONFIRM.cancel)
-  if (answer !== CONFIRM.approve) return { text: 'Cancelled; nothing was deleted.' }
+  const options = [...CONFIRM.choices.map(choice => choice.label), CONFIRM.cancel]
+  const answer = await $.ui.ask(confirmationQuestion(plan), { header: CONFIRM.header, options }).catch(() => CONFIRM.cancel)
+  // Only an exact choice deletes: cancel, Esc, or free text typed under "Other" keeps everything.
+  const choice = CONFIRM.choices.find(candidate => candidate.label === answer)
+  if (choice === undefined) return { text: 'Cancelled; nothing was deleted.' }
 
-  pending.add(await useCase.begin(plan))
+  pending.add(await useCase.begin(plan, choice.policy))
 
   return { text: 'Closing the session; a summary is printed once the deletion is done.' }
 }

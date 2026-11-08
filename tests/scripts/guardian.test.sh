@@ -6,6 +6,7 @@
 
 readonly GUARDIAN="$REPO_ROOT/bin/guardian.sh"
 readonly NO_TTY=-
+readonly NO_HISTORY=-
 readonly NO_DELAY=0
 readonly FAILSAFE_SECONDS=2
 
@@ -61,6 +62,18 @@ check 'keeps an entry whose name only starts with the id' exists "$root/flat/${S
 check "removes the session's history rows" file_equals "$box/history.jsonl" "{\"sessionId\":\"$OTHER_SESSION_ID\"}"
 check 'removes its work folder' is_missing "$work"
 kill "$reused" 2>/dev/null
+
+# --- prompt history kept ------------------------------------------------------
+
+box=$(new_sandbox)
+mkdir -p "$box/work"
+write_job "$box/work" "$box"
+printf '{"sessionId":"%s"}\n' "$SESSION_ID" >"$box/history.jsonl"
+kept_history=$(cat "$box/history.jsonl")
+claude=$(spawn_orphan sleep 30)
+sh "$GUARDIAN" "$claude" "$SESSION_ID" "$NO_HISTORY" "$box/work" "$NO_TTY" "$NO_DELAY" "$FAILSAFE_SECONDS"
+check "leaves the prompt history alone when it is kept (-)" file_equals "$box/history.jsonl" "$kept_history"
+check 'still closes the session when the history is kept' is_gone "$claude"
 
 # --- a session that ignores SIGTERM -------------------------------------------
 

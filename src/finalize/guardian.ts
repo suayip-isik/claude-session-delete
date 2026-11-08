@@ -1,6 +1,6 @@
 import { BIN, GUARDIAN, TIMING } from '../config'
 import { historyFile } from '../cleanup/historyInspector'
-import type { ProcessInfo, SessionContext } from '../domain'
+import type { HistoryPolicy, ProcessInfo, SessionContext } from '../domain'
 import type { KeyedScope } from '../inventory/sources/sessionKeyedSource'
 import type { Host } from '../host/host'
 import { isPlainAbsolutePath, joinPath } from '../host/paths'
@@ -15,6 +15,8 @@ export interface GuardianJob {
   readonly allowedRoots: readonly string[]
   /** The session's processes, killed after the exit if one still runs the same command. */
   readonly processes: readonly ProcessInfo[]
+  /** Whether the guardian purges the session's prompt-history rows again after the exit. */
+  readonly historyPolicy: HistoryPolicy
   /** Printed by the guardian only if `session.end` did not print the real summary. */
   readonly fallbackReport: string
 }
@@ -43,9 +45,9 @@ export class Guardian {
       script,
       String(job.context.claudePid),
       job.context.sessionId,
-      historyFile(job.context),
+      job.historyPolicy === 'purge' ? historyFile(job.context) : GUARDIAN.none,
       workDir,
-      job.context.tty ?? '-',
+      job.context.tty ?? GUARDIAN.none,
       TIMING.exitSignalDelaySeconds,
       String(TIMING.exitFailsafeSeconds),
     ]

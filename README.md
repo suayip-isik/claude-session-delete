@@ -18,11 +18,11 @@
 
 Codex CLI has a `/delete` command that removes a session for good. Claude Code does not. This plugin adds one.
 
-Type `/delete` in a session and confirm. The session closes, and everything it left behind is removed: the transcript, file history, temporary files, prompt-history rows, background processes and the ports they opened. A one-line summary of what was freed is printed in your terminal, and your shell prompt is ready right below it.
+Type `/delete` in a session and confirm. The session closes, and everything it left behind is removed: the transcript, file history, temporary files, background processes and the ports they opened. The prompts you typed stay available to ↑ in later sessions unless you choose to delete them too. A one-line summary of what was freed is printed in your terminal, and your shell prompt is ready right below it.
 
 ```
 ✔ Claude Code session 2c8497bd-3f84-426a-807e-57281be0ce3d deleted
-  4 files removed · 16.2 KB freed · 2 processes stopped · 0 ports closed · 1 history row removed
+  4 files removed · 16.2 KB freed · 2 processes stopped · 0 ports closed · prompt history kept
   The "claude --resume" hint above no longer applies.
 ```
 
@@ -69,8 +69,17 @@ claude plugin install session-delete --marketplace suayip-isik/claude-session-de
 /delete
 ```
 
-1. A dialog shows what will happen: the number of files and their size, the processes to stop, the ports to close and the history rows to remove. Nothing has been touched at this point.
-2. Choose **Yes, delete permanently** to go ahead, or **Cancel** (or press Esc) to leave everything as it is.
+1. A dialog shows what will happen: the number of files and their size, the processes to stop, the ports to close, and how many of your prompts (and pasted texts) are in the prompt history. Nothing has been touched at this point.
+2. Choose one:
+
+   | Choice                                                            | The session | Your prompts in ↑ history      |
+   | ----------------------------------------------------------------- | ----------- | ------------------------------ |
+   | **Delete session, keep prompt history** (first, the safe default) | deleted     | kept, pasted texts included    |
+   | **Delete session and prompt history**                             | deleted     | deleted, pasted texts included |
+   | **Cancel**, or Esc                                                | kept        | kept                           |
+
+   Keeping the prompt history means that, in a later session, ↑ still recalls what you typed in the deleted one. The conversation itself (Claude's answers, tool output, files) is gone either way.
+
 3. The session closes within about a second, the summary is printed and your shell prompt returns. No key press is needed.
 
 If a built-in command ever takes the name `delete`, the command registers as `/delete-session` instead.
@@ -90,7 +99,7 @@ If a built-in command ever takes the name `delete`, the command registers as `/d
 4. **Delete during the exit.** Claude runs its `session.end` hooks after its interface is gone but while it still holds the terminal, and the shell is still waiting for it. In that window the plugin:
    - stops the session's processes (`SIGTERM`, then `SIGKILL`) and checks that their ports are closed,
    - deletes every trace, rescanning for files written after the preview (a short session's transcript only appears at exit),
-   - removes the session's rows from `history.jsonl`,
+   - if you chose to delete the prompt history, removes the session's rows from `history.jsonl` and the pasted texts only they point to,
    - prints the summary.
 5. **Prompt.** Claude exits and your shell prompt appears below the summary.
 6. **Sweep.** After the exit, the guardian quietly removes whatever Claude wrote in its last moments. If the exit could not finish the work for any reason, the guardian finishes it and prints the summary itself.
@@ -105,9 +114,15 @@ If a built-in command ever takes the name `delete`, the command registers as `/d
 | Temporary files (scratchpad, background task output)              | `/tmp/claude-<uid>/<project>/<id>/`                                                       |
 | Running-session registry entry and IPC socket                     | `~/.claude/sessions/<pid>.json`, `.key`, `/tmp/cc-socks/<pid>.sock`                       |
 | Shell snapshot                                                    | `~/.claude/shell-snapshots/snapshot-*.sh`, only when provably this session's              |
-| Plans and pasted texts only this session used                     | `~/.claude/plans/*.md`, `~/.claude/paste-cache/*.txt`                                     |
-| Prompt-history rows                                               | `~/.claude/history.jsonl` (only this session's rows; the file itself stays)               |
+| Plans only this session used                                      | `~/.claude/plans/*.md`                                                                    |
 | Processes the session started, and their ports                    | the session's process tree, plus detached processes carrying its `CLAUDE_CODE_SESSION_ID` |
+
+With **Delete session and prompt history**, these go too:
+
+| Trace                                 | Location                                                                    |
+| ------------------------------------- | --------------------------------------------------------------------------- |
+| Prompt-history rows (what ↑ recalls)  | `~/.claude/history.jsonl` (only this session's rows; the file itself stays) |
+| Pasted texts only those rows point to | `~/.claude/paste-cache/*.txt`                                               |
 
 `CLAUDE_CONFIG_DIR` is honoured when set.
 

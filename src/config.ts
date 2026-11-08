@@ -2,17 +2,30 @@
  * Every tunable value of the mod lives here; modules read names, never literals.
  */
 
+import type { HistoryPolicy } from './domain'
+
 /** Slash command names, in order of preference (the first one the engine accepts wins). */
 export const COMMAND_NAMES = ['delete', 'delete-session'] as const
 
 export const COMMAND_DESCRIPTION =
   'Permanently delete this session and every trace of it on disk, stop its processes and close it (no model call)'
 
+/**
+ * The confirmation dialog: one choice per prompt-history policy, the safe one
+ * first (keep: nothing the person may still want back is lost), then cancel.
+ */
 export const CONFIRM = {
   header: 'Delete session',
-  approve: 'Yes, delete permanently',
+  choices: [
+    { label: 'Delete session, keep prompt history', policy: 'keep' },
+    { label: 'Delete session and prompt history', policy: 'purge' },
+  ],
   cancel: 'Cancel',
-} as const
+} as const satisfies {
+  readonly header: string
+  readonly choices: readonly { readonly label: string; readonly policy: HistoryPolicy }[]
+  readonly cancel: string
+}
 
 export const SESSION_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
@@ -99,6 +112,8 @@ export const GUARDIAN = {
   script: 'bin/guardian.sh',
   purgeHistoryScript: 'bin/purge-history.sh',
   workDirTemplate: 'claude-session-delete.XXXXXX',
+  /** Passed for an argument that does not apply (no terminal; prompt history kept). */
+  none: '-',
   files: {
     paths: 'paths',
     roots: 'roots',
