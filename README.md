@@ -97,17 +97,17 @@ If a built-in command ever takes the name `delete`, the command registers as `/d
 
 ## What is deleted
 
-| Trace | Location |
-| --- | --- |
-| Transcript, subagent transcripts, tool outputs | `~/.claude/projects/<project>/<id>.jsonl`, `…/<id>/` |
-| File history (rewind checkpoints) | `~/.claude/file-history/<id>/` |
-| Session environment, todos, tasks, debug log, session mods folder | `~/.claude/{session-env,todos,tasks,debug,dev-mods}/<id>*` |
-| Temporary files (scratchpad, background task output) | `/tmp/claude-<uid>/<project>/<id>/` |
-| Running-session registry entry and IPC socket | `~/.claude/sessions/<pid>.json`, `.key`, `/tmp/cc-socks/<pid>.sock` |
-| Shell snapshot | `~/.claude/shell-snapshots/snapshot-*.sh`, only when provably this session's |
-| Plans and pasted texts only this session used | `~/.claude/plans/*.md`, `~/.claude/paste-cache/*.txt` |
-| Prompt-history rows | `~/.claude/history.jsonl` (only this session's rows; the file itself stays) |
-| Processes the session started, and their ports | the session's process tree, plus detached processes carrying its `CLAUDE_CODE_SESSION_ID` |
+| Trace                                                             | Location                                                                                  |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Transcript, subagent transcripts, tool outputs                    | `~/.claude/projects/<project>/<id>.jsonl`, `…/<id>/`                                      |
+| File history (rewind checkpoints)                                 | `~/.claude/file-history/<id>/`                                                            |
+| Session environment, todos, tasks, debug log, session mods folder | `~/.claude/{session-env,todos,tasks,debug,dev-mods}/<id>*`                                |
+| Temporary files (scratchpad, background task output)              | `/tmp/claude-<uid>/<project>/<id>/`                                                       |
+| Running-session registry entry and IPC socket                     | `~/.claude/sessions/<pid>.json`, `.key`, `/tmp/cc-socks/<pid>.sock`                       |
+| Shell snapshot                                                    | `~/.claude/shell-snapshots/snapshot-*.sh`, only when provably this session's              |
+| Plans and pasted texts only this session used                     | `~/.claude/plans/*.md`, `~/.claude/paste-cache/*.txt`                                     |
+| Prompt-history rows                                               | `~/.claude/history.jsonl` (only this session's rows; the file itself stays)               |
+| Processes the session started, and their ports                    | the session's process tree, plus detached processes carrying its `CLAUDE_CODE_SESSION_ID` |
 
 `CLAUDE_CONFIG_DIR` is honoured when set.
 
@@ -140,13 +140,13 @@ claude plugin marketplace remove claude-session-delete
 
 ## Troubleshooting
 
-| Symptom | Cause and fix |
-| --- | --- |
-| `Unknown command: /delete` | The plugin is not loaded in this session. Run `/reload-plugins` or start a new session, and check `claude plugin list`. |
-| `This command is supported on macOS only` | The plugin relies on macOS tools; other platforms are not supported yet. |
-| `The session registry does not match this process` | The session registry and the running process disagree, so the plugin refuses to act. Restart the session and try again. |
-| The summary is printed after your prompt | Claude's exit could not finish the work within its time limit, so the guardian finished it. Raise the limit with `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS` (milliseconds; 1500 by default). |
-| A `!` line in the summary | Something could not be stopped or removed. The line names it and says why. |
+| Symptom                                            | Cause and fix                                                                                                                                                                               |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Unknown command: /delete`                         | The plugin is not loaded in this session. Run `/reload-plugins` or start a new session, and check `claude plugin list`.                                                                     |
+| `This command is supported on macOS only`          | The plugin relies on macOS tools; other platforms are not supported yet.                                                                                                                    |
+| `The session registry does not match this process` | The session registry and the running process disagree, so the plugin refuses to act. Restart the session and try again.                                                                     |
+| The summary is printed after your prompt           | Claude's exit could not finish the work within its time limit, so the guardian finished it. Raise the limit with `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS` (milliseconds; 1500 by default). |
+| A `!` line in the summary                          | Something could not be stopped or removed. The line names it and says why.                                                                                                                  |
 
 ## Development
 

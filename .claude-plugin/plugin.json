@@ -9,7 +9,14 @@
   "homepage": "https://github.com/suayip-isik/claude-session-delete#readme",
   "repository": "https://github.com/suayip-isik/claude-session-delete",
   "license": "MIT",
-  "keywords": ["session", "delete", "privacy", "cleanup", "disk-space", "slash-command"],
+  "keywords": [
+    "session",
+    "delete",
+    "privacy",
+    "cleanup",
+    "disk-space",
+    "slash-command"
+  ],
   "icon": "./assets/icon.png",
   "types": "./types/index.d.ts"
 }
