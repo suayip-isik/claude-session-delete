@@ -146,6 +146,18 @@ Deleting files is the whole point of this plugin, so it is built to fail closed:
 
 Found a way to make it delete something it should not? Please report it privately; see [SECURITY.md](SECURITY.md).
 
+## Data handling and disclosure
+
+Everything the plugin does is listed here.
+
+- **No network access.** It makes no network requests and sends no data anywhere. It never calls the model.
+- **No data collected or stored.** It keeps no copy of what it deletes. The only state it keeps is a list of shell snapshot file names (`session-delete.shellSnapshots`), used to decide which snapshot belongs to this session.
+- **Reads** only the session's own traces under `~/.claude`, `/tmp/claude-<uid>` and the session's socket folder (see [What is deleted](#what-is-deleted)), plus the process table to find the session's own processes.
+- **Writes and deletes** only inside those same folders, and only after you confirm. `history.jsonl` is rewritten (atomically) only if you choose to delete the prompt history.
+- **Runs code** from this repository only: `hooks/register.ts` and the shell scripts in `bin/` (`guardian.sh`, `purge-history.sh`). Nothing is downloaded or installed at runtime, and the source is readable, not minified.
+- **Does not change** Claude Code's settings or permissions, and reads no credentials or environment secrets (it reads only `CLAUDE_CONFIG_DIR` and `HOME`).
+- **Stops processes** only those the session started (its process tree, plus detached processes that carry its `CLAUDE_CODE_SESSION_ID`).
+
 ## Uninstall
 
 ```bash
