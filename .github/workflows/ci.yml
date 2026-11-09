@@ -44,9 +44,7 @@ jobs:
         run: pnpm run test:scripts
 
       - name: Install Claude Code
-        run: |
-          curl -fsSL https://claude.ai/install.sh | bash
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+        run: brew install --cask claude-code
 
       - name: Validate plugin
         run: |

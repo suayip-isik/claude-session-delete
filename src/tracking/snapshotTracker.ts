@@ -1,7 +1,7 @@
 import type { EngineInterface, On } from 'claude-code'
 
 import { CLAUDE_LAYOUT } from '../config'
-import { claudeConfigDir } from '../context/engineFacts'
+import { configDirFrom } from '../context/engineFacts'
 import { joinPath } from '../host/paths'
 
 /** A snapshot is written as the first shell of a session starts: only one stamped this soon after the call counts. */
@@ -19,7 +19,9 @@ export function registerSnapshotTracker(on: On): void {
     const known = (await $.state.get({ plugin: 'session-delete', key: 'shellSnapshots' })).value ?? []
     if (known.length > 0) return next(e)
 
-    const dir = joinPath(await claudeConfigDir($), CLAUDE_LAYOUT.shellSnapshots)
+    const override = await $.env.get('CLAUDE_CONFIG_DIR')
+    const home = override ? undefined : await $.env.get('HOME')
+    const dir = joinPath(configDirFrom(override, home), CLAUDE_LAYOUT.shellSnapshots)
     const startedAt = await $.clock.now()
     const before = await snapshotNames($, dir)
     const result = await next(e)

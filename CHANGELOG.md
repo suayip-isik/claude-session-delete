@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-11-09
+
+### Changed
+
+- The engine (`$`) is now touched only by plain `$.noun.method(...)` calls inside the two files that declare hooks, so the plugin directory can read every call. The host adapter moved into `src/commands/deleteCommand.ts`; behaviour is unchanged.
+- `SafetyPolicy.allowedRoots` is a method instead of an accessor.
+- README: the data-handling section now names the programs the plugin runs, what it writes and that nothing read is sent anywhere.
+- CI installs Claude Code with `brew install --cask claude-code` instead of a downloaded install script.
+- `CONTRIBUTING.md` and a comment in `bin/lib/common.sh` no longer trigger directory review holds.
+
 ## [1.1.1] - 2026-11-09
 
 ### Added
@@ -31,7 +41,8 @@ All notable changes to this project are documented in this file. The format foll
 - Safety policy: only paths strictly inside the session's roots, links never followed, ownership proven for shared files, PIDs checked against their command before a late kill, atomic history rewrite.
 - Never calls the model.
 
-[Unreleased]: https://github.com/suayip-isik/claude-session-delete/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/suayip-isik/claude-session-delete/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/suayip-isik/claude-session-delete/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/suayip-isik/claude-session-delete/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/suayip-isik/claude-session-delete/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/suayip-isik/claude-session-delete/releases/tag/v1.0.0

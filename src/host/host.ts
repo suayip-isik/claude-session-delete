@@ -1,10 +1,7 @@
-import type { EngineInterface } from 'claude-code'
-
-import { TIMING } from '../config'
-
 /**
  * The narrow slice of the engine the mod depends on. Every module takes these
- * interfaces, never `$`, so each one can be tested with a fake host.
+ * interfaces, never `$`, so each one can be tested with a fake host. The real
+ * host is built in `commands/deleteCommand.ts`, from plain `$.noun.method(...)` calls.
  */
 export interface RunResult {
   readonly exitCode: number
@@ -41,39 +38,4 @@ export interface Host {
   readonly runner: CommandRunner
   readonly fs: FileSystem
   readonly pluginRoot: string
-}
-
-export function createHost($: EngineInterface): Host {
-  const runner: CommandRunner = {
-    run: async (argv, options) => {
-      const { exitCode, stdout, stderr } = await $.process.run(argv, {
-        timeoutMs: options?.timeoutMs ?? TIMING.commandTimeoutMs,
-        ...(options?.stdin === undefined ? {} : { stdin: options.stdin }),
-      })
-
-      return { exitCode, stdout, stderr }
-    },
-  }
-
-  const fs: FileSystem = {
-    list: async path => {
-      try {
-        return (await $.fs.list(path)).map(({ name, kind, isLink }) => ({ name, kind, isLink }))
-      } catch {
-        return []
-      }
-    },
-    exists: path => $.fs.exists(path),
-    readText: path => $.fs.read(path),
-    writeText: (path, text) => $.fs.write(path, text),
-    realPath: async path => {
-      try {
-        return (await $.fs.stat(path, { resolve: true })).realPath
-      } catch {
-        return undefined
-      }
-    },
-  }
-
-  return { runner, fs, pluginRoot: $.plugin.root }
 }

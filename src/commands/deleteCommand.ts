@@ -2,9 +2,9 @@ import type { EngineInterface, On } from 'claude-code'
 
 import { COMMAND_DESCRIPTION, COMMAND_NAMES, CONFIRM, TIMING } from '../config'
 import { createDeleteSession } from '../compositionRoot'
-import { readSessionFacts, trackedShellSnapshots } from '../context/engineFacts'
-import { ContextError } from '../context/sessionContext'
-import { createHost } from '../host/host'
+import { configDirFrom } from '../context/engineFacts'
+import { ContextError, type SessionFacts } from '../context/sessionContext'
+import type { Host } from '../host/host'
 import { describe } from '../inventory/inventory'
 import { confirmationQuestion } from '../report/format'
 import type { PendingDeletions } from '../usecase/pendingDeletions'
@@ -37,7 +37,7 @@ export function registerDeleteCommand(on: On, pending: PendingDeletions): void {
     // Too little of the exit's bound left: the guardian deletes and prints after the exit instead.
     if (waiting === undefined || next.budget.remainingMs < TIMING.sessionEndReserveMs) return ended
 
-    await createDeleteSession(createHost($), () => trackedShellSnapshots($)).complete(waiting)
+    await completeDelete($, waiting)
 
     return ended
   }).catch((_$, e, next) => next(e))
@@ -61,11 +61,11 @@ async function registerFirstAvailableName($: EngineInterface): Promise<void> {
 }
 
 async function runDelete($: EngineInterface, pending: PendingDeletions): Promise<{ text: string }> {
-  const useCase = createDeleteSession(createHost($), () => trackedShellSnapshots($))
+  const useCase = deleteSessionOf($)
 
   let plan
   try {
-    plan = await useCase.plan(await readSessionFacts($))
+    plan = await useCase.plan(await sessionFactsOf($))
   } catch (error) {
     const prefix = error instanceof ContextError ? '' : 'Unexpected error: '
 
@@ -81,4 +81,60 @@ async function runDelete($: EngineInterface, pending: PendingDeletions): Promise
   pending.add(await useCase.begin(plan, choice.policy))
 
   return { text: 'Closing the session; a summary is printed once the deletion is done.' }
+}
+
+async function completeDelete($: EngineInterface, waiting: NonNullable<ReturnType<PendingDeletions['take']>>): Promise<void> {
+  await deleteSessionOf($).complete(waiting)
+}
+
+function deleteSessionOf($: EngineInterface): ReturnType<typeof createDeleteSession> {
+  return createDeleteSession(hostOf($), () => trackedSnapshotsOf($))
+}
+
+/** Identity facts off the engine; the env names are literals at the call. */
+async function sessionFactsOf($: EngineInterface): Promise<SessionFacts> {
+  const override = await $.env.get('CLAUDE_CONFIG_DIR')
+  const home = override ? undefined : await $.env.get('HOME')
+
+  return { sessionId: await $.session.id(), configDir: configDirFrom(override, home) }
+}
+
+async function trackedSnapshotsOf($: EngineInterface): Promise<readonly string[]> {
+  return (await $.state.get({ plugin: 'session-delete', key: 'shellSnapshots' })).value ?? []
+}
+
+/** The mod's whole window onto the machine, as plain engine calls. */
+function hostOf($: EngineInterface): Host {
+  return {
+    runner: {
+      run: async (argv, options) => {
+        const { exitCode, stdout, stderr } = await $.process.run(argv, {
+          timeoutMs: options?.timeoutMs ?? TIMING.commandTimeoutMs,
+          ...(options?.stdin === undefined ? {} : { stdin: options.stdin }),
+        })
+
+        return { exitCode, stdout, stderr }
+      },
+    },
+    fs: {
+      list: async path => {
+        try {
+          return (await $.fs.list(path)).map(({ name, kind, isLink }) => ({ name, kind, isLink }))
+        } catch {
+          return []
+        }
+      },
+      exists: path => $.fs.exists(path),
+      readText: path => $.fs.read(path),
+      writeText: (path, text) => $.fs.write(path, text),
+      realPath: async path => {
+        try {
+          return (await $.fs.stat(path, { resolve: true })).realPath
+        } catch {
+          return undefined
+        }
+      },
+    },
+    pluginRoot: $.plugin.root,
+  }
 }

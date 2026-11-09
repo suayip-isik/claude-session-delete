@@ -1,24 +1,15 @@
-import type { EngineInterface } from 'claude-code'
-
 import { CLAUDE_LAYOUT } from '../config'
 import { joinPath } from '../host/paths'
-import { ContextError, type SessionFacts } from './sessionContext'
+import { ContextError } from './sessionContext'
 
-/** The only place that reads identity facts off the engine (env names must be literals at the call). */
-export async function readSessionFacts($: EngineInterface): Promise<SessionFacts> {
-  return { sessionId: await $.session.id(), configDir: await claudeConfigDir($) }
-}
-
-export async function claudeConfigDir($: EngineInterface): Promise<string> {
-  const override = await $.env.get('CLAUDE_CONFIG_DIR')
+/**
+ * The Claude config folder, from the two environment values the hook files read
+ * (`CLAUDE_CONFIG_DIR`, then `HOME`). Pure on purpose: the engine is only ever
+ * touched by plain `$.noun.method(...)` calls inside the files that declare hooks.
+ */
+export function configDirFrom(override: string | undefined, home: string | undefined): string {
   if (override) return override
-
-  const home = await $.env.get('HOME')
   if (!home) throw new ContextError('HOME is not set; the Claude config folder could not be found.')
 
   return joinPath(home, CLAUDE_LAYOUT.defaultDirName)
-}
-
-export async function trackedShellSnapshots($: EngineInterface): Promise<readonly string[]> {
-  return (await $.state.get({ plugin: 'session-delete', key: 'shellSnapshots' })).value ?? []
 }

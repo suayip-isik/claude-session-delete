@@ -15,7 +15,7 @@ export interface Verdict {
 export class SafetyPolicy {
   private constructor(private readonly roots: readonly string[]) { }
 
-  get allowedRoots(): readonly string[] {
+  allowedRoots(): readonly string[] {
     return this.roots
   }
 

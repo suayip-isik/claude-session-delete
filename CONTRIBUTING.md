@@ -30,7 +30,7 @@ The folder is machine-generated, so it is git-ignored.
 To try your working copy with `/delete` in real sessions, add the folder as a marketplace:
 
 ```bash
-claude plugin marketplace add "$PWD"
+claude plugin marketplace add .
 claude plugin install session-delete@claude-session-delete
 ```
 

@@ -63,7 +63,7 @@ function inventoryFactory(host: Host, trackedSnapshots: () => Promise<readonly s
         collectPromptHistoryFiles: () => promptHistoryFiles.collect(context),
         rescan: () => rescan.collect(context),
         keyedScopes: keyed.flatMap(source => source.scopes(context)),
-        allowedRoots: policy.allowedRoots,
+        allowedRoots: policy.allowedRoots(),
       }
     },
   }
