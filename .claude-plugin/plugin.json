@@ -1,7 +1,7 @@
 {
   "name": "session-delete",
   "version": "1.1.3",
-  "description": "/delete for Claude Code: permanently deletes the current session and every trace it left on disk, stops its processes and ports, closes the session and prints what was freed. Runs locally, never calls the model.",
+  "description": "/delete for Claude Code (CLI and VS Code extension): permanently deletes the current session and every trace it left on disk, stops its processes and ports, and prints what was freed. Runs locally, never calls the model.",
   "author": {
     "name": "Şuayip Işık",
     "url": "https://github.com/suayip-isik"
@@ -10,12 +10,18 @@
   "repository": "https://github.com/suayip-isik/claude-session-delete",
   "license": "MIT",
   "keywords": [
+    "claude-code",
+    "claude-code-plugin",
+    "delete-session",
+    "delete-conversation",
     "session",
     "delete",
     "privacy",
     "cleanup",
     "disk-space",
-    "slash-command"
+    "slash-command",
+    "vscode",
+    "macos"
   ],
   "icon": "./assets/icon.png",
   "types": "./types/index.d.ts"

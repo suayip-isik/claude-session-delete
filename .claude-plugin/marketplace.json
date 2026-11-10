@@ -9,7 +9,16 @@
     {
       "name": "session-delete",
       "source": "./",
-      "description": "Permanently delete the current Claude Code session and every trace of it, without calling the model."
+      "description": "Permanently delete the current Claude Code session (CLI or VS Code extension) and every trace of it, without calling the model.",
+      "keywords": [
+        "claude-code",
+        "delete-session",
+        "privacy",
+        "cleanup",
+        "vscode",
+        "slash-command"
+      ],
+      "category": "productivity"
     }
   ]
 }

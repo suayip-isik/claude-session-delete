@@ -5,16 +5,22 @@
 <h1 align="center">claude-session-delete</h1>
 
 <p align="center">
-  <code>/delete</code> for Claude Code: permanently delete the current session and every trace it left on your disk.
+  <code>/delete</code> for Claude Code: permanently delete the current session and every trace it left on your disk.<br>
+  Works in the terminal and in the VS Code extension. Local, free, never calls the model.
 </p>
 
 <p align="center">
   <a href="https://github.com/suayip-isik/claude-session-delete/actions/workflows/ci.yml"><img src="https://github.com/suayip-isik/claude-session-delete/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license"></a>
+  <a href="https://github.com/suayip-isik/claude-session-delete/releases"><img src="https://img.shields.io/github/v/release/suayip-isik/claude-session-delete" alt="Latest release"></a>
+  <a href="https://github.com/suayip-isik/claude-session-delete/stargazers"><img src="https://img.shields.io/github/stars/suayip-isik/claude-session-delete?style=flat" alt="GitHub stars"></a>
   <img src="https://img.shields.io/badge/platform-macOS-lightgrey.svg" alt="macOS">
+  <img src="https://img.shields.io/badge/Claude%20Code-CLI%20%C2%B7%20VS%20Code-orange.svg" alt="Claude Code CLI and VS Code">
 </p>
 
 ---
+
+**How do I delete a Claude Code session?** Install this plugin and type `/delete`. Claude Code has no built-in way to delete a session, a conversation, its transcript or its history; this plugin adds one.
 
 Codex CLI has a `/delete` command that removes a session for good. Claude Code does not. This plugin adds one.
 
@@ -37,6 +43,7 @@ Type `/delete` in a session and confirm. The session closes, and everything it l
 - [What is deleted](#what-is-deleted)
 - [Safety](#safety)
 - [Uninstall](#uninstall)
+- [FAQ](#faq)
 - [Troubleshooting](#troubleshooting)
 - [Development](#development)
 - [License](#license)
@@ -44,7 +51,7 @@ Type `/delete` in a session and confirm. The session closes, and everything it l
 ## Requirements
 
 - **macOS.** The plugin uses BSD `ps`, `stat` and `lsof` output formats. On any other platform the command stops without touching anything.
-- **Claude Code with function-hook plugins** (tested with 2.1.319). That plugin API is in early access, so a future Claude Code release may change it; CI runs the plugin's tests against the latest release.
+- **Claude Code with function-hook plugins**, in the terminal or the VS Code extension (tested with 2.1.319). That plugin API is in early access, so a future Claude Code release may change it; CI runs the plugin's tests against the latest release.
 - Optional: [ripgrep](https://github.com/BurntSushi/ripgrep) (`brew install ripgrep`). It makes the shared-file ownership check about 10× faster on large session archives.
 
 ## Install
@@ -171,6 +178,29 @@ Everything the plugin does is listed here.
 - **Runs code** from this repository only: `hooks/register.ts` and the shell scripts in `bin/` (`guardian.sh`, `purge-history.sh`). Nothing is downloaded or installed at runtime, and the source is readable, not minified.
 - **Does not change** Claude Code's settings or permissions, and reads no credentials or environment secrets (it reads only `CLAUDE_CONFIG_DIR` and `HOME`).
 - **Stops processes** only those the session started (its process tree, plus detached processes that carry its `CLAUDE_CODE_SESSION_ID`).
+
+## FAQ
+
+**How do I delete a Claude Code session?**
+Install the plugin and run `/delete`, then confirm. The transcript, file history, temporary files and background processes of that session are removed.
+
+**How do I delete a Claude Code conversation or chat history?**
+`/delete` removes the conversation (the transcript) and everything around it. Choose **Delete session and prompt history** to also clear the prompts that ↑ recalls.
+
+**Does it work in the VS Code extension?**
+Yes. The panel stays open and switches to a fresh empty session; see [In the VS Code extension](#in-the-vs-code-extension).
+
+**Does it remove the session from `claude --resume` and `/resume`?**
+Yes. The transcript is gone, so the session no longer appears.
+
+**Does it cost tokens or send anything anywhere?**
+No. It is handled locally by a hook, makes no network requests and works even when you have hit your usage limit.
+
+**Does it delete my project files?**
+No. Only what the session itself left under `~/.claude` and `/tmp/claude-<uid>`.
+
+**Windows or Linux?**
+macOS only for now.
 
 ## Uninstall
 
