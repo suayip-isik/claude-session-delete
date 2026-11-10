@@ -27,6 +27,12 @@ export const CONFIRM = {
   readonly cancel: string
 }
 
+/** The registry `entrypoint` of a session that owns a terminal; any other host (an editor extension) keeps its process. */
+export const TERMINAL_ENTRYPOINT = 'cli'
+
+/** The built-in command that replaces the running session with an empty one, process kept. */
+export const RESET_COMMAND = 'clear'
+
 export const SESSION_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 /** The environment variable Claude Code stamps on every shell it starts for a session. */
@@ -99,6 +105,8 @@ export const TIMING = {
   /** Below this much of `session.end`'s bound left, the work is left to the guardian. */
   sessionEndReserveMs: 150,
   commandTimeoutMs: 60_000,
+  /** The reset runs after `/delete` has answered; the engine refuses a command started while the answer is pending. */
+  resetDelayMs: 300,
 } as const
 
 export const REPORT = {

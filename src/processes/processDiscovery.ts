@@ -1,5 +1,6 @@
-import { SESSION_ENV_TAG } from '../config'
+import { CLAUDE_LAYOUT, SESSION_ENV_TAG } from '../config'
 import type { ProcessInfo, SessionContext } from '../domain'
+import { joinPath } from '../host/paths'
 import { descendantsOf, type ProcessTable } from './processTable'
 
 /**
@@ -7,6 +8,9 @@ import { descendantsOf, type ProcessTable } from './processTable'
  * the tree (a daemonised server, `nohup … &`) but still carries the session's
  * environment tag. The Claude process itself, a resumed sibling of the session
  * and Claude's own helper children (the same executable) are never included.
+ * When Claude keeps running (`reset`), what it started for itself, MCP servers
+ * and hook helpers, is spared too: only the shells it ran for tools, and what
+ * they started, belong to the session.
  */
 export class ProcessDiscovery {
   constructor(private readonly table: ProcessTable) { }
@@ -20,6 +24,7 @@ export class ProcessDiscovery {
       context.claudePid,
       ...context.siblingPids,
       ...context.siblingPids.flatMap(pid => descendantsOf(pid, all).map(process => process.pid)),
+      ...(context.ending === 'reset' ? engineOwnedPids(context, all) : []),
     ])
     const tagged = await this.table.pidsWithEnv(SESSION_ENV_TAG, context.sessionId)
     const candidates = new Map<number, ProcessInfo>()
@@ -42,4 +47,12 @@ export class ProcessDiscovery {
 
 function executableOf(command: string | undefined): string | undefined {
   return command?.trim().split(/\s+/)[0]
+}
+
+/** Claude's direct children that are not tool shells (a tool shell sources a shell snapshot), with everything below them. */
+function engineOwnedPids(context: SessionContext, table: readonly ProcessInfo[]): number[] {
+  const snapshots = joinPath(context.configDir, CLAUDE_LAYOUT.shellSnapshots)
+  const owned = table.filter(process => process.ppid === context.claudePid && !process.command.includes(snapshots))
+
+  return owned.flatMap(process => [process.pid, ...descendantsOf(process.pid, table).map(child => child.pid)])
 }

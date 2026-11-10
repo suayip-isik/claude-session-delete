@@ -78,7 +78,7 @@ export function deletionReport(
     '',
     `✔ Claude Code session ${plan.context.sessionId} deleted`,
     `  ${facts.join(' · ')}`,
-    '  The "claude --resume" hint above no longer applies.',
+    ...(plan.context.ending === 'exit' ? ['  The "claude --resume" hint above no longer applies.'] : []),
     ...warnings(plan, history.policy, termination, deletion).map(warning => `  ! ${warning}`),
     '',
   ]

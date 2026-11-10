@@ -1,5 +1,5 @@
-import { BIN, CLAUDE_LAYOUT, SESSION_ID_PATTERN, SUPPORTED_PLATFORM, TEMP_LAYOUT } from '../config'
-import type { SessionContext } from '../domain'
+import { BIN, CLAUDE_LAYOUT, SESSION_ID_PATTERN, SUPPORTED_PLATFORM, TEMP_LAYOUT, TERMINAL_ENTRYPOINT } from '../config'
+import type { SessionContext, SessionEnding } from '../domain'
 import type { Host } from '../host/host'
 import { joinPath } from '../host/paths'
 
@@ -13,6 +13,7 @@ interface RegistryEntry {
   readonly pid: number
   readonly sessionId: string
   readonly messagingSocketPath?: string
+  readonly entrypoint?: string
 }
 
 export class ContextError extends Error { }
@@ -40,15 +41,19 @@ export class SessionContextResolver {
       registry.filter(entry => entry.sessionId === sessionId && entry.pid !== claudePid).map(entry => entry.pid),
     )
 
+    // A hosted session's process outlives the deletion: its registry entry and socket stay, and it has no terminal to print on.
+    const ending = endingOf(own)
+
     return {
       sessionId,
+      ending,
       claudePid,
       siblingPids,
       configDir,
       tempRoot: await this.tempRoot(),
-      tty: await this.ttyOf(claudePid),
-      socketPath: own?.messagingSocketPath,
-      registryFiles: await this.registryFilesOf(configDir, claudePid),
+      tty: ending === 'exit' ? await this.ttyOf(claudePid) : undefined,
+      socketPath: ending === 'exit' ? own?.messagingSocketPath : undefined,
+      registryFiles: ending === 'exit' ? await this.registryFilesOf(configDir, claudePid) : [],
     }
   }
 
@@ -86,10 +91,15 @@ export class SessionContextResolver {
     try {
       const parsed: unknown = JSON.parse(await this.host.fs.readText(path))
       if (typeof parsed !== 'object' || parsed === null) return undefined
-      const { pid, sessionId, messagingSocketPath } = parsed as Record<string, unknown>
+      const { pid, sessionId, messagingSocketPath, entrypoint } = parsed as Record<string, unknown>
       if (typeof pid !== 'number' || typeof sessionId !== 'string') return undefined
 
-      return { pid, sessionId, messagingSocketPath: typeof messagingSocketPath === 'string' ? messagingSocketPath : undefined }
+      return {
+        pid,
+        sessionId,
+        messagingSocketPath: typeof messagingSocketPath === 'string' ? messagingSocketPath : undefined,
+        entrypoint: typeof entrypoint === 'string' ? entrypoint : undefined,
+      }
     } catch {
       return undefined
     }
@@ -131,4 +141,9 @@ export class SessionContextResolver {
 
     return (await this.host.fs.realPath(root)) ?? root
   }
+}
+
+/** Only a session the registry proves to be a terminal one is closed by ending its process. */
+function endingOf(entry: RegistryEntry | undefined): SessionEnding {
+  return entry?.entrypoint === TERMINAL_ENTRYPOINT ? 'exit' : 'reset'
 }

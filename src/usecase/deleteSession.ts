@@ -28,7 +28,8 @@ export interface DeletionPlan {
 export interface PendingDeletion {
   readonly plan: DeletionPlan
   readonly historyPolicy: HistoryPolicy
-  readonly guardian: GuardianHandle
+  /** Present when the session closes by Claude's exit (`exit`); a reset needs no guardian. */
+  readonly guardian: GuardianHandle | undefined
 }
 
 export interface CompletionResult {
@@ -66,11 +67,14 @@ export interface DeleteSessionDependencies {
 /**
  * The /delete flow in three steps:
  *  - `plan`     reads only, before the confirmation;
- *  - `begin`    on a yes, with the prompt-history choice: starts the guardian,
- *               which closes the session at once;
- *  - `complete` inside Claude's exit (`session.end`): the interface is gone but
- *               Claude still holds the terminal, so it stops, deletes and prints
- *               the summary before the shell prompt returns.
+ *  - `begin`    on a yes, with the prompt-history choice: for a terminal session
+ *               starts the guardian, which closes it at once; a hosted session
+ *               (`reset`) is replaced by the caller instead, with no guardian;
+ *  - `complete` once the session is closed or replaced. In a terminal, inside
+ *               Claude's exit (`session.end`): the interface is gone but Claude
+ *               still holds the terminal, so it stops, deletes and prints the
+ *               summary before the shell prompt returns. Hosted: right after the
+ *               reset, the summary left to the caller.
  */
 export class DeleteSessionUseCase {
   constructor(private readonly deps: DeleteSessionDependencies) { }
@@ -97,6 +101,8 @@ export class DeleteSessionUseCase {
   }
 
   async begin(plan: DeletionPlan, historyPolicy: HistoryPolicy): Promise<PendingDeletion> {
+    if (plan.context.ending === 'reset') return { plan, historyPolicy, guardian: undefined }
+
     const guardian = await this.deps.guardian.start({
       context: plan.context,
       sweepPaths: artifactsToDelete(plan.inventory, plan.promptHistory, historyPolicy).map(artifact => artifact.path),
@@ -121,7 +127,7 @@ export class DeleteSessionUseCase {
     const report = deletionReport(plan, termination, deletion, history)
 
     const isPrinted = await this.deps.terminal.write(plan.context.tty, report)
-    if (isPrinted) await this.deps.guardian.markPrinted(pending.guardian)
+    if (isPrinted && pending.guardian !== undefined) await this.deps.guardian.markPrinted(pending.guardian)
 
     return { report, isPrinted }
   }

@@ -7,7 +7,8 @@ import { existingArtifacts } from './existingArtifacts'
 /**
  * Shell snapshots are not named after the session, so ownership is proven two
  * ways only: the snapshot tracker saw this session create it, or one of this
- * session's live shells is sourcing it right now.
+ * session's live shells is sourcing it right now. A process that keeps running
+ * (`reset`) keeps its snapshot: the fresh session's shells source it too.
  */
 export class ShellSnapshotSource implements ArtifactSource {
   readonly name = 'shell-snapshots'
@@ -19,6 +20,8 @@ export class ShellSnapshotSource implements ArtifactSource {
   ) { }
 
   async locate(context: SessionContext): Promise<Artifact[]> {
+    if (context.ending === 'reset') return []
+
     const dir = joinPath(context.configDir, CLAUDE_LAYOUT.shellSnapshots)
     const referenced = this.liveCommands().flatMap(command => command.split(/\s+/))
     const candidates = [...(await this.tracked()), ...referenced].filter(path => parentOf(path) === dir)

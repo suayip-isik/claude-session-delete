@@ -104,6 +104,16 @@ If a built-in command ever takes the name `delete`, the command registers as `/d
 5. **Prompt.** Claude exits and your shell prompt appears below the summary.
 6. **Sweep.** After the exit, the guardian quietly removes whatever Claude wrote in its last moments. If the exit could not finish the work for any reason, the guardian finishes it and prints the summary itself.
 
+### In the VS Code extension
+
+The extension owns Claude's process, so ending it would show as an error and close the panel. There `/delete` works differently:
+
+1. The same preview and confirmation.
+2. A fresh, empty session replaces the current one (the built-in `/clear`). The panel stays open and Claude keeps running.
+3. The old session's traces are deleted, its processes are stopped and the summary appears in the panel. Claude's own registry entry, socket, shell snapshot and helper processes (such as MCP servers) are left alone, because the fresh session still uses them.
+
+The plugin picks this mode from the session registry: only a session whose `entrypoint` is `cli` is closed by ending its process.
+
 ## What is deleted
 
 | Trace                                                             | Location                                                                                  |
@@ -154,6 +164,7 @@ Everything the plugin does is listed here.
 - **No data collected or stored.** It keeps no copy of what it deletes. The only state it keeps is a list of shell snapshot file names (`session-delete.shellSnapshots`), used to decide which snapshot belongs to this session.
 - **Reads** only the session's own traces under `~/.claude`, `/tmp/claude-<uid>` and the session's socket folder (see [What is deleted](#what-is-deleted)), plus the process table to find the session's own processes.
 - **Writes and deletes** only inside those same folders, and only after you confirm. `history.jsonl` is rewritten (atomically) only if you choose to delete the prompt history.
+- **Engine calls.** Besides files and processes, it asks Claude Code to run its built-in `/clear` (`command.run`) and waits briefly (`clock.sleep`) only in the VS Code flow above.
 - **Programs it runs.** Through the engine's `process.run` it runs only fixed macOS tools, each by absolute path and with an argument vector (never a shell string): `/bin/sh`, `/bin/ps`, `/bin/kill`, `/bin/rm`, `/bin/sleep`, `/usr/bin/find`, `/usr/bin/stat`, `/usr/bin/grep`, `/usr/bin/id`, `/usr/bin/uname`, `/usr/bin/mktemp`, `/usr/bin/perl`, `/usr/sbin/lsof`, plus this plugin's own `bin/guardian.sh` and `bin/purge-history.sh`, and optionally ripgrep (`rg`) when it is installed. They list processes and ports, check file ownership, and remove the session's files. The command line is assembled in code because the session id, process ids and paths differ per call; each is validated first (a malformed id or pid is refused with exit 64, and a path must sit strictly inside the session's roots).
 - **What is read and where it goes.** The plugin reads the session's files and the process table, and passes their paths, ids and process ids to the programs above as arguments, on this machine only. File contents, the conversation and tool input are never sent anywhere. The `tool.call` hook on `Bash` reads no conversation text: it only compares the list of shell snapshot files before and after a shell command.
 - **Files it writes** (through `fs.write`): a few small work files for the guardian (the list of allowed roots, the files to delete, process ids) inside a private temporary folder created with `mktemp -d` that the guardian removes when the deletion ends. The path comes from `mktemp`, not from user input. It never edits build, start-up, settings or instruction files.
@@ -170,13 +181,14 @@ claude plugin marketplace remove claude-session-delete
 
 ## Troubleshooting
 
-| Symptom                                            | Cause and fix                                                                                                                                                                               |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Unknown command: /delete`                         | The plugin is not loaded in this session. Run `/reload-plugins` or start a new session, and check `claude plugin list`.                                                                     |
-| `This command is supported on macOS only`          | The plugin relies on macOS tools; other platforms are not supported yet.                                                                                                                    |
-| `The session registry does not match this process` | The session registry and the running process disagree, so the plugin refuses to act. Restart the session and try again.                                                                     |
-| The summary is printed after your prompt           | Claude's exit could not finish the work within its time limit, so the guardian finished it. Raise the limit with `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS` (milliseconds; 1500 by default). |
-| A `!` line in the summary                          | Something could not be stopped or removed. The line names it and says why.                                                                                                                  |
+| Symptom                                                   | Cause and fix                                                                                                                                                                               |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Unknown command: /delete`                                | The plugin is not loaded in this session. Run `/reload-plugins` or start a new session, and check `claude plugin list`.                                                                     |
+| `This command is supported on macOS only`                 | The plugin relies on macOS tools; other platforms are not supported yet.                                                                                                                    |
+| `The session registry does not match this process`        | The session registry and the running process disagree, so the plugin refuses to act. Restart the session and try again.                                                                     |
+| VS Code: the summary shows in the panel, not the terminal | By design; see [In the VS Code extension](#in-the-vs-code-extension).                                                                                                                       |
+| The summary is printed after your prompt                  | Claude's exit could not finish the work within its time limit, so the guardian finished it. Raise the limit with `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS` (milliseconds; 1500 by default). |
+| A `!` line in the summary                                 | Something could not be stopped or removed. The line names it and says why.                                                                                                                  |
 
 ## Development
 

@@ -1,12 +1,13 @@
 import type { EngineInterface, On } from 'claude-code'
 
-import { COMMAND_DESCRIPTION, COMMAND_NAMES, CONFIRM, TIMING } from '../config'
+import { COMMAND_DESCRIPTION, COMMAND_NAMES, CONFIRM, RESET_COMMAND, TIMING } from '../config'
 import { createDeleteSession } from '../compositionRoot'
 import { configDirFrom } from '../context/engineFacts'
 import { ContextError, type SessionFacts } from '../context/sessionContext'
 import type { Host } from '../host/host'
 import { describe } from '../inventory/inventory'
 import { confirmationQuestion } from '../report/format'
+import type { PendingDeletion } from '../usecase/deleteSession'
 import type { PendingDeletions } from '../usecase/pendingDeletions'
 
 /**
@@ -16,6 +17,10 @@ import type { PendingDeletions } from '../usecase/pendingDeletions'
  *  2. `session.end` (Claude exiting: its interface gone, the terminal still its
  *     own) stops, deletes and prints the summary, so the shell prompt follows
  *     the summary and no key is needed.
+ *
+ * A session hosted by an editor extension is not closed that way (ending its
+ * process would show as an error and leave the panel dead): a fresh empty
+ * session replaces it, then the old one is deleted and the summary is logged.
  */
 export function registerDeleteCommand(on: On, pending: PendingDeletions): void {
   on('session.start', async ($, e, next) => {
@@ -78,12 +83,36 @@ async function runDelete($: EngineInterface, pending: PendingDeletions): Promise
   const choice = CONFIRM.choices.find(candidate => candidate.label === answer)
   if (choice === undefined) return { text: 'Cancelled; nothing was deleted.' }
 
-  pending.add(await useCase.begin(plan, choice.policy))
+  const waiting = await useCase.begin(plan, choice.policy)
+  if (plan.context.ending === 'exit') {
+    pending.add(waiting)
 
-  return { text: 'Closing the session; a summary is printed once the deletion is done.' }
+    return { text: 'Closing the session; a summary is printed once the deletion is done.' }
+  }
+  // Not awaited: the engine refuses a command started while this one is still answering.
+  void resetThenDelete($, waiting)
+
+  return { text: 'Starting a fresh session; the deleted session\'s summary follows.' }
 }
 
-async function completeDelete($: EngineInterface, waiting: NonNullable<ReturnType<PendingDeletions['take']>>): Promise<void> {
+/** Hosted session: replace it with an empty one (process and panel stay), then delete what it left. */
+async function resetThenDelete($: EngineInterface, waiting: PendingDeletion): Promise<void> {
+  try {
+    await $.clock.sleep(TIMING.resetDelayMs)
+    await $.command.run({ command: RESET_COMMAND })
+  } catch (error) {
+    $.ui.log(`Session ${waiting.plan.context.sessionId} was not deleted: could not start a fresh session (${describe(error)}).`)
+
+    return
+  }
+  try {
+    $.ui.log((await deleteSessionOf($).complete(waiting)).report)
+  } catch (error) {
+    $.ui.log(`Session ${waiting.plan.context.sessionId} may be partly deleted: ${describe(error)}`)
+  }
+}
+
+async function completeDelete($: EngineInterface, waiting: PendingDeletion): Promise<void> {
   await deleteSessionOf($).complete(waiting)
 }
 

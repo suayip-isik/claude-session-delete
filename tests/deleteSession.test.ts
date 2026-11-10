@@ -79,7 +79,7 @@ test('begin only starts the guardian: nothing is stopped or deleted while the se
   expect(launch).toContain(String(CLAUDE_PID))
   expect(launch).toContain('/dev/ttys009')
   const work = '/var/folders/xx/T/claude-session-delete.abc123'
-  expect(pending.guardian.workDir).toBe(work)
+  expect(pending.guardian?.workDir).toBe(work)
   expect(host.written.get(`${work}/paths`)).toContain(`${CONFIG}/file-history/${SID}`)
   expect(host.written.get(`${work}/pids`)).toContain('5001 node server.js')
   // Swept after the exit whatever they held at plan time: a short session writes its transcript only then.
@@ -135,6 +135,52 @@ test('keep (the default choice): the session goes, its prompts and pasted texts 
   expect(host.ran('/bin/sh').some(argv => argv[1]?.endsWith('bin/purge-history.sh'))).toBe(false)
   expect(result.report).toContain('prompt history kept')
   expect(result.report).not.toContain('history row')
+})
+
+const VSCODE = 'claude-vscode'
+
+test('a terminal session ends by Claude\'s exit; one hosted by an editor extension keeps its process', async () => {
+  const terminal = (await createDeleteSession(new FakeHost(), async () => []).plan(facts)).context
+  const hosted = (await createDeleteSession(new FakeHost(VSCODE), async () => []).plan(facts)).context
+
+  expect(terminal.ending).toBe('exit')
+  expect(terminal.tty).toBe('/dev/ttys009')
+  expect(hosted.ending).toBe('reset')
+  expect(hosted.tty).toBeUndefined()
+})
+
+test('hosted plan spares Claude\'s own helpers, its registry entry, its socket and its shell snapshot', async () => {
+  const plan = await createDeleteSession(new FakeHost(VSCODE), async () => []).plan(facts)
+  const paths = plan.inventory.artifacts.map(artifact => artifact.path)
+
+  expect(plan.processes.processes.map(process => process.pid).sort()).toEqual([5000, 5001]) // never the MCP server 4400 or its child
+  expect(paths).not.toContain(`${CONFIG}/sessions/4242.json`)
+  expect(paths).not.toContain(`${CONFIG}/sessions/4242.abc.key`)
+  expect(paths).not.toContain(SOCKET)
+  expect(paths).not.toContain(SNAPSHOT)
+  expect(paths).toContain(`${CONFIG}/file-history/${SID}`)
+  expect(paths).toContain(PLAN)
+})
+
+test('hosted begin starts no guardian; complete deletes without signalling Claude and leaves the summary to the caller', async () => {
+  const host = new FakeHost(VSCODE)
+  const useCase = createDeleteSession(host, async () => [])
+  const pending = await useCase.begin(await useCase.plan(facts), 'keep')
+
+  expect(pending.guardian).toBeUndefined()
+  expect(host.ran('/bin/sh').some(argv => argv.includes('/plugins/session-delete/bin/guardian.sh'))).toBe(false)
+  expect([...host.written.keys()].length).toBe(0)
+
+  host.appearAtExit(`${CONFIG}/projects/-Users-tester-app`, `${SID}.jsonl`)
+  const result = await useCase.complete(pending)
+
+  expect(host.ran('/bin/kill')[0]).toEqual(['/bin/kill', '-TERM', '5000', '5001'])
+  expect(host.ran('/bin/rm')[0]).toContain(TRANSCRIPT)
+  expect(host.ran('/bin/rm')[0]).not.toContain(SOCKET)
+  expect(host.ran('/bin/sh').some(argv => argv[2] === 'cat > "$1"')).toBe(false)
+  expect(result.isPrinted).toBe(false)
+  expect(result.report).toContain(`session ${SID} deleted`)
+  expect(result.report).not.toContain('--resume')
 })
 
 test('the safety policy refuses anything outside the session roots', async () => {

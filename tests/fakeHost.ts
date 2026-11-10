@@ -16,10 +16,14 @@ export const SNAPSHOT = `${CONFIG}/shell-snapshots/snapshot-zsh-1700000000000-ab
 
 /** A small machine: Claude 4242 runs `npm run dev` (5000) → `node server.js` (5001, port 3000). */
 export class FakeHost implements Host {
+  constructor(private readonly entrypoint: string = 'cli') { }
+
   readonly pluginRoot = '/plugins/session-delete'
   readonly calls: string[][] = []
   readonly written = new Map<string, string>()
-  private readonly alivePids = new Set([CLAUDE_PID, 5000, 5001, 7777])
+  /** What a hosted Claude starts for itself (an MCP server and its child); a hosted deletion must spare them. */
+  private readonly engineHelpers = [`4400 ${CLAUDE_PID} /usr/local/bin/mcp-server`, '4401 4400 mcp-child']
+  private readonly alivePids = new Set([CLAUDE_PID, 4400, 4401, 5000, 5001, 7777])
   private readonly files = new Set<string>([
     `${PROJECT}/${SID}`,
     `${CONFIG}/file-history/${SID}`,
@@ -50,7 +54,7 @@ export class FakeHost implements Host {
     list: async path => this.tree[path] ?? [],
     exists: async path => this.files.has(path),
     readText: async path => {
-      if (path.endsWith('/4242.json')) return JSON.stringify({ pid: 4242, sessionId: SID, messagingSocketPath: SOCKET })
+      if (path.endsWith('/4242.json')) return JSON.stringify({ pid: 4242, sessionId: SID, messagingSocketPath: SOCKET, entrypoint: this.entrypoint })
       if (path.endsWith('/7777.json')) return JSON.stringify({ pid: 7777, sessionId: 'aaaaaaaa-2222-4333-8444-555555555555' })
       throw new Error(`missing ${path}`)
     },
@@ -128,6 +132,7 @@ export class FakeHost implements Host {
         `5000 ${CLAUDE_PID} /bin/zsh -c source ${SNAPSHOT} && npm run dev`,
         '5001 5000 node server.js',
         '6000 1 /usr/bin/unrelated',
+        ...(this.entrypoint === 'cli' ? [] : this.engineHelpers),
       ].join('\n')
     }
     const pids = (args[args.indexOf('-p') + 1] ?? '').split(',').map(Number)

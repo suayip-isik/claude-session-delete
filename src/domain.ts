@@ -1,7 +1,16 @@
 /** Plain data shared by every module. No behaviour lives here. */
 
+/**
+ * How the session's Claude process ends once the person confirmed:
+ *  - `exit`:  a terminal session. Claude exits and deletes during its exit.
+ *  - `reset`: a hosted session (an editor extension). Claude keeps running, so the
+ *             panel stays open: a fresh session replaces this one, then it is deleted.
+ */
+export type SessionEnding = 'exit' | 'reset'
+
 export interface SessionContext {
   readonly sessionId: string
+  readonly ending: SessionEnding
   /** The Claude Code process that owns this session. */
   readonly claudePid: number
   /** Other live Claude processes attached to the same session id (a resumed copy). */

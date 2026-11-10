@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-11-10
+
+### Fixed
+
+- `/delete` in the VS Code extension: it ended Claude's process, which the extension reports as `Claude Code process exited with code 143`, and the session was left half deleted. A session that does not own a terminal (registry `entrypoint` other than `cli`) is now replaced by a fresh empty session through the built-in `/clear`, so the panel stays open; the old session is then deleted and the summary is logged in the panel. The process, its registry entry, socket, shell snapshot and helpers (MCP servers) are left alone. Terminal sessions behave as before.
+
 ## [1.1.2] - 2026-11-09
 
 ### Changed
@@ -41,7 +47,8 @@ All notable changes to this project are documented in this file. The format foll
 - Safety policy: only paths strictly inside the session's roots, links never followed, ownership proven for shared files, PIDs checked against their command before a late kill, atomic history rewrite.
 - Never calls the model.
 
-[Unreleased]: https://github.com/suayip-isik/claude-session-delete/compare/v1.1.2...HEAD
+[Unreleased]: https://github.com/suayip-isik/claude-session-delete/compare/v1.1.3...HEAD
+[1.1.3]: https://github.com/suayip-isik/claude-session-delete/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/suayip-isik/claude-session-delete/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/suayip-isik/claude-session-delete/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/suayip-isik/claude-session-delete/compare/v1.0.0...v1.1.0
